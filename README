@@ -1,0 +1,117 @@
+Directories:
+
+ codes:
+  Directory where the majority of code is stored. This includes fingerprint calculation, manipulation code, and plotting scripts.
+
+ data:
+  Where the original data are stored. This includes the various datasets in their original form, and the scripts used to 
+   transform them to a uniform format. 
+
+ figures:
+  Where figures are stored when they are created.
+ 
+ meta: 
+  analysis on the volume/time, without spatial variability
+
+ ppt:
+  The location of relevant powerpoint presentations
+
+ res_fingerprints:
+  The location of each reservoir's fingerprint
+
+ time_series:
+  The location of each year's fingerprint, separated by dataset
+
+ writing:
+  The location of any manuscript drafts or outlines or thoughts that need to be written down
+
+Workflow:
+
+---- I ---- Get the data all in the right format for analysis.
+
+ 1) Once the data have been downloaded, there is a script in each data directory called format_data.py that will write a new file 
+     with a common data format
+ 2) In the codes/ directory, run ChangeZarflSlope.py. This will allow you to scale the Zarfl capacity from MW to volume. 
+     Grill et al 2015 find a slope of 3.19. That is what we use in Hawley et al 2020. You can set your own value. 
+ 3) Back in the data/ directory, there are two cshell scripts that combine these different databases:
+     makeResAll.csh will combine GRanD and Zarfl (Const and Plan)
+     makeResChaoFuture will combine Chao and Zarfl. 
+ 4) In the codes/ directory, run make_res_maps_GMT.py. This python script will create necessary files to plot reservoirs in GMT,
+     and will call the gmt script, Reservoirs_volume.csh, to create the figures for you. This produces Fig. 1 in Hawley et al 2020.
+
+---- II ---- Temporal Analysis, no spatial component
+
+ 1) In codes/ run the file make_histogram_file.py. This will use the files from I to generate time series for each database.
+ 2) Run Histo.py. This will generate a histogram, akin to Fig. 2 in Hawley et al 2020. 
+ 3) Run make_TS.res.py - this will make a timeseries of impoundment (vol in each reservoir for each year)
+     This takes into account that some reservoirs take more than a year to fill. Details are in Hawley et al 2020 and in the code.
+     Created files are stored in time_series directory. This will run with DBs other than Grand, but since they are all assumed to be 
+     built in the same year, it is mostly zeros. If this changes in the future, this code will work with other DBs.
+
+---- III ---- Spatial Analysis
+ 
+ 1) Download fingerprints from Zenodo. Each fingerprint is normalized to the same volume, 10^6 m^3. 
+ 2) Run make_TS.FP.res.py - this uses the timeseries of impoundment and the fingerprints to create a fingerprint for each year. 
+     Each year is the change from the beginning of the dataset up to that point... for example:
+       -If I look simply at the FP for year 1959, I'm looking at the change in sea level due to all reservoirs built prior to 1959.
+       -If I subtract 1950 from 1959, I'll be looking at the change in sea level during the decade 1950-1959.
+     Do this for all three databases.
+ 3) Run make_db_totalFP.py for databases 'P' and 'C'. This will add all the reservoirs together so that there is one fingerprint for 
+     each database.
+ 4) Run make_Future.py. This will simply add the total fingerprints for P and C together. 
+ 5) Make sure glat512_w is in the codes directory. Run make_latlon_gile.py. This will create LatLon.xy, which many codes will 
+     reference when going from index number to lat/lon location. 
+ 6) Run plotFP.py. This will create a fingerprint based on user inputs. It was used to create figures 3 and 4 in Hawley et al 2020.
+     It calls a two other functions:
+      i. gmt_fingerprint.csh -- this is a GMT script that will create the map. The default settings will make a GLOBAL map.
+          Sections of this code may be uncommented to create insets in the paper: 
+ 	   South America, Southeast Asia, and Manicouagan Reservoir. 
+      ii. make_cpt_imloa_rev.py -- this code is used in the gmt script above to make the color scale for the GLOBAL maps. 
+           Because the sea level change gradient in the far field is much smaller (~ an order of magnitude) than in the near field,
+	    this code will make a color plot that has steps that increase in size as the values increase. 
+
+---- IV ---- Variability in Storage
+
+ 1) the code ts_fingerprint_var.py was used to make the figures of variability in storage. 
+     This will not run well given the current state of the code. When this was written, the fingerprint timeseries was a single file,
+     where each row was a year, and each entry on that row corresponded to a point on the earth. This file was well in excess of 2 GB,
+     so I made the decision to instead have a file for each year that could be read separately. 
+     
+     If you want to run this code, I suggest one of the following:
+      i. you can go back to the code make_TS.FP.res.py, and at the bottom, there is a section that is commented out that saves the 
+          fingerprints as one large matrix, rather than individual years. Uncomment that, create the large 2+GB txt file, and run 
+	  the code. 
+      ii. rewrite the section in this code that reads one file, called 'TS.FP.res.Grand.txt', to read each year instead. 
+     
+     Most of the parts in this code in principle will remake figure S4 of Hawley et al 2020. 
+ 2) the code make_TS.Variable.py has the same issue as the above. It will write out two files, each sea level curves at the location
+     closest to the chosen reservoir: one with no assumed variability in reservoir storage, and the other with calculated variability.
+ 3) run plot_variability to plot figure S4 in Hawley et al 2020. 
+
+
+---- V ---- Tide Gauge Analysis
+
+ 1) Make sure that there are data in the [base directory]/data/TideGauge/rlr_annual/data
+ 2) Run make_TideGaugeMax.py. This has the same issue as described in IV.1. If you choose option (i) above, this code should write 
+     out the maximum year-over-year increase in sea level at every RLR tide gauge location. 
+ 3) Run WriteLargestTGMax.py to generate a txt file with only those reservoirs whose max change is above a certain threshold. That
+     threshold can be modified in the code. 
+ 4) Run plotTGMax.csh. This will plot each RLR tide gauge, colored by the maximum yearly change. This is the base of figure 5 in 
+     Hawley et al 2020.
+ 5) Make sure the [base directory]/data/TideGauge/Piecuch/BarotropicModelOutputForWilliam.xlsx file exists. Run the script 
+     make_individual_tg_files.py. This will make files for each of the tide gauge records and put them in this folder. 
+ 6) Run writeSelectTG_TS to create a file that shows the predicted curve at each of a number of selected tide gauge 
+     locations, as determined from V.3. 
+ 7) Run plot_TGTS_Piecuch.py. This will plot three curves on the same axis for a given RLR Tide Gauge location:
+     i. The predicted sea level curve due to reservoir construction. 
+     ii. The observed sea level curve at that tide gauge. 
+     iii. The sea level observations corrected for atmospheric contributions, from C. Piecuch, following Piechch et al 2019. 
+     This forms the rest of figure 5 in Hawley et al 2020. 
+
+---- VI ---- Population Analysis
+
+ 1) run make_chao_histogram.py. This will take the Chao et al 2008 impoundment data and add the seepage term, and extend that into 
+     the future from the Zarfl et al 2015.
+ 2) run make_population_graphs.py. This will take all the impoundment data, for GRanD, Zarfl, and Chao, and plot them not through 
+     time traditionally, but as a function of population. A curve fitted through Chao et al 2008 c.f. Kopp et al 2014 is plotted,
+     and runs through the world population estimate through 2040. This creates figure S5 from Hawley et al 2020. 
