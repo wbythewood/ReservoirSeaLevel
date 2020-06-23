@@ -72,7 +72,14 @@ Workflow:
 
 ---- IV ---- Variability in Storage
 
- 1) the code ts_fingerprint_var.py was used to make the figures of variability in storage. 
+ 1) Run make_var_coeff.py for the reservoir you're interested in. Make sure that you've downloaded the satellite altimetry data:
+     it should be in the folder defined in the varPath variable at the top of the script
+     and should be named var_[resNo].txt
+     and should be formatted exactly as downloaded from the USDA, in particular the frst column is yyyymmdd and the fourth is datum (m)
+     This code will take this satellite altimetry file and convert it to the fractional impoundment of the reservoir, assuming that 
+      the maximum datum is a completely full reservoir, and calculating the mean depth of the reservoir by simply dividing the volume 
+      by the area, both provided in the GRanD database. 
+ 2) the code ts_fingerprint_var.py was used to make the figures of variability in storage. 
      This will not run well given the current state of the code. When this was written, the fingerprint timeseries was a single file,
      where each row was a year, and each entry on that row corresponded to a point on the earth. This file was well in excess of 2 GB,
      so I made the decision to instead have a file for each year that could be read separately. 
@@ -82,11 +89,15 @@ Workflow:
           fingerprints as one large matrix, rather than individual years. Uncomment that, create the large 2+GB txt file, and run 
 	  the code. 
       ii. rewrite the section in this code that reads one file, called 'TS.FP.res.Grand.txt', to read each year instead. 
+
+     Either way, it reads the fingerprint file for each year, as well as the file generated in IV.1 that is an estimate of the 
+     fractional capacity of the reservoir through time. When the reservoir is not full, the code subtracts the fingerprint, multiploied 
+     by the corresponding fractional capacity, from the fingerprint time series. 
      
      Most of the parts in this code in principle will remake figure S4 of Hawley et al 2020. 
- 2) the code make_TS.Variable.py has the same issue as the above. It will write out two files, each sea level curves at the location
+ 3) the code make_TS.Variable.py has the same issue as the above. It will write out two files, each sea level curves at the location
      closest to the chosen reservoir: one with no assumed variability in reservoir storage, and the other with calculated variability.
- 3) run plot_variability to plot figure S4 in Hawley et al 2020. 
+ 4) run plot_variability to plot figure S4 in Hawley et al 2020. 
 
 
 ---- V ---- Tide Gauge Analysis
